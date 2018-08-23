@@ -18,45 +18,72 @@ def load_doc(filename):
 	file.close()
 	return text
 
+def main():
+    # load
+    in_filename = 'engrawdata.txt'  # 'char_sequences.txt'
+    raw_text = load_doc(in_filename)
+    lines = raw_text.split('\n')
 
-# load
-in_filename = 'char_sequences.txt'
-raw_text = load_doc(in_filename)
-lines = raw_text.split('\n')
+    # integer encode sequences of characters
+    chars = sorted(list(set(raw_text)))
+    
+    mapping = dict((c, i) for i, c in enumerate(chars))
+    sequences = list()
+    for line in lines:
+	    # integer encode line
+	    encoded_seq = [mapping[char] for char in line]
+	    # store
+	    sequences.append(encoded_seq)
 
-# integer encode sequences of characters
-chars = sorted(list(set(raw_text)))
-mapping = dict((c, i) for i, c in enumerate(chars))
-sequences = list()
-for line in lines:
-	# integer encode line
-	encoded_seq = [mapping[char] for char in line]
-	# store
-	sequences.append(encoded_seq)
+    # vocabulary size
+    vocab_size = len(mapping)
+    print('Vocabulary Size: %d' % vocab_size)
 
-# vocabulary size
-vocab_size = len(mapping)
-print('Vocabulary Size: %d' % vocab_size)
+    # separate into input and output
+    sequences = array(sequences)
+    X, y = sequences[:, :-1], sequences[:, -1]
+    sequences = [to_categorical(x, num_classes=vocab_size) for x in X]
+    X = array(sequences)
+    y = to_categorical(y, num_classes=vocab_size)
 
-# separate into input and output
-sequences = array(sequences)
-X, y = sequences[:, :-1], sequences[:, -1]
-sequences = [to_categorical(x, num_classes=vocab_size) for x in X]
-X = array(sequences)
-y = to_categorical(y, num_classes=vocab_size)
+    # define model
+    model = Sequential()
+    model.add(LSTM(75, input_shape=(X.shape[1], X.shape[2])))
+    model.add(Dense(vocab_size, activation='softmax'))
+    print(model.summary())
+    # compile model
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adam', metrics=['accuracy'])
+    # fit model
+    model.fit(X, y, epochs=100, verbose=2)
 
-# define model
-model = Sequential()
-model.add(LSTM(75, input_shape=(X.shape[1], X.shape[2])))
-model.add(Dense(vocab_size, activation='softmax'))
-print(model.summary())
-# compile model
-model.compile(loss='categorical_crossentropy',
-              optimizer='adam', metrics=['accuracy'])
-# fit model
-model.fit(X, y, epochs=100, verbose=2)
+    # save the model to file
+    model.save('model.h5')
+    # save the mapping
+    dump(mapping, open('mapping.pkl', 'wb'))
 
-# save the model to file
-model.save('model.h5')
-# save the mapping
-dump(mapping, open('mapping.pkl', 'wb'))
+def testmain():
+	# load
+    in_filename = 'engrawdata.txt'  # 'char_sequences.txt'
+    raw_text = load_doc(in_filename)
+    lines = raw_text.split('\n')
+
+    # integer encode sequences of characters
+    chars = sorted(list(set(raw_text)))
+    #print("chars are:\n", chars)
+    mapping = dict((c, i) for i, c in enumerate(chars))
+    print("mapping is:\n", mapping)
+
+    sequences = list()
+    for line in lines:
+	    # integer encode line
+	    encoded_seq = [mapping[char] for char in line]
+	    # store
+	    sequences.append(encoded_seq)
+    #print("The all sequences are:\n",sequences)
+	# vocabulary size
+    vocab_size = len(mapping)
+    print('Vocabulary Size: %d' % vocab_size)
+
+if __name__ == "__main__":
+	main()
